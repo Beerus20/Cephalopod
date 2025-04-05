@@ -1,118 +1,12 @@
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <stdbool.h>
+#include "main.h"
 
-/**
- * Auto-generated code below aims at helping you parse
- * the standard input according to the problem statement.
- **/
+typedef int  (*t_func)(int [3][3], int, int);
 
-int	loop(int tab[3][3], int depth);
-int top(int tab[3][3], int i, int j, int res, int depth, int *nb);
-int right(int tab[3][3], int i, int j, int res, int depth, int *nb);
-int bottom(int tab[3][3], int i, int j, int res, int depth, int *nb);
-int left(int tab[3][3], int i, int j, int res, int depth, int *nb);
-
-int top(int tab[3][3], int i, int j, int res, int depth, int *nb)
-{
-	int tmp;
-
-	tmp = 0;
-	if (i - 1 >= 0 && tab[i - 1][j] && tab[i - 1][j] < 6)
-	{
-		if (*nb >= 4)
-			return (res);
-		*nb -= 1;
-		tmp = right(tab, i, j, res + tab[i - 1][j], depth, nb);
-		if (tmp && tmp < 6 && tmp + res < 6)
-		{
-			tab[i][j] = tmp + res;
-			tab[i - 1][j] = 0;
-			tab[i][j - 1] = 0;
-			loop(tab, --depth);
-			return (res + tmp);
-		}
-	}
-	return (res);
-}
-
-int right(int tab[3][3], int i, int j, int res, int depth, int *nb)
-{
-	int tmp;
-
-	tmp = 0;
-	if (j + 1 >= 0 && tab[i][j + 1] && tab[i][j + 1] < 6)
-	{
-		if (*nb >= 4)
-			return (res);
-		*nb -= 1;
-		tmp = bottom(tab, i, j, res + tab[i][j + 1], depth, nb);
-		if (tmp && tmp < 6 && tmp + res < 6)
-		{
-			tab[i][j] = res + tmp;
-			tab[i][j + 1] = 0;
-			tab[i + 1][j] = 0;
-			loop(tab, --depth);
-			return (res + tmp);
-		}
-	}	
-	return (0);
-}
-
-int bottom(int tab[3][3], int i, int j, int res, int depth, int *nb)
-{
-	int tmp;
-
-	tmp = 0;
-	if (i + 1 >= 0 && tab[i + 1][j] && tab[i + 1][j] < 6)
-	{
-		if (*nb >= 4)
-			return (res);
-		*nb -= 1;
-		tmp = left(tab, i ,j, res + tab[i + 1][j], depth, nb);
-		if (tmp && tmp < 6 && tmp + res < 6)
-		{
-			tab[i][j] = res + tmp;
-			tab[i + 1][j] = 0;
-			tab[i][j - 1] = 0;
-			loop(tab, --depth);
-			return (res + tmp);
-		}
-	}	
-	return (0);
-}
-
-int left(int tab[3][3], int i, int j, int res, int depth, int *nb)
-{
-	int tmp;
-
-	tmp = 0;
-	if (j - 1 >= 0 && tab[i][j - 1] && tab[i][j - 1] < 6)
-	{
-		if (*nb >= 4)
-			return (res);
-		*nb -= 1;
-		tmp = top(tab, i, j, res + tab[i][j - 1], depth, nb);
-		if (tmp && tmp < 6 && tmp + res < 6)
-		{
-			tab[i][j] = res + tmp;
-			tab[i][j] = 0;
-			tab[i][j] = 0;
-			loop(tab, --depth);
-			return (res + tmp);
-		}
-	}	
-	return (0);
-}
-
-typedef int  (*t_func)(int [3][3], int, int, int, int, int *);
-
-int check(int tab[3][3], int i, int j, int depth, int *nb, int index)
+int check(int tab[3][3], int i, int j, int index)
 {
 	static t_func func[] = {top, right, bottom, left};
 
-	return (func[index](tab, i, j, 0, depth, nb));
+	return (func[index](tab, i, j));
 }
 
 int hash(int tab[3][3])
@@ -129,33 +23,102 @@ int hash(int tab[3][3])
 		(tab[2][2] * 10e0) * (1 << 30)));
 }
 
-int	loop(int tab[3][3], int depth)
+void	setNullTab(int tab[3][3], int i, int j, int index)
 {
-	int index;
-	int res;
-	int nb;
-
-	res = 0;
-	if (!depth)
-		return (res);
-	for (int i = 0; i < 3; i++)
+	switch (index)
 	{
-		for (int j = 0; j < 3; j++)
+		case 1:
+			tab[i - 1][j] = 0;
+			break;
+		case 2:
+			tab[i][j + 1] = 0;
+			break;
+		case 3:
+			tab[i + 1][j] = 0;
+			break;
+		case 4:
+			tab[i][j - 1] = 0;
+			break;
+		default:
+			break;
+	}
+}
+
+void	updateTab(int tab[3][3], int i, int j, int index)
+{
+	switch (index)
+	{
+		case 1:
+			tab[i - 1][j] = 0;
+			break;
+		case 2:
 		{
-			nb = 0;
-			if (!tab[i][j])
+			tab[i][j + 1] = 0;
+			break;
+		}
+		case 3:
+			tab[i][j - 1] = 0;
+			break;
+		case 4:
+			tab[i + 1][j] = 0;
+			break;
+		default:
+			break;
+	}
+}
+
+int	routine(int tab[3][3], int depth, int begin)
+{
+	int	i;
+	int	tmp;
+	int	nb;
+	int	res;
+	int	id;
+
+	i = 0;
+	nb = 0;
+	tmp = 0;
+	res = 0;
+	(void)tab;
+	(void)depth;
+	while (i < 4)
+	{
+		tmp = check(tab, 1, 1, begin++);
+		if (tmp)
+		{
+			res += tmp;
+			printf("res : %d %d\n", res, tmp);
+			nb++;
+			if (nb >= 2)
 			{
-				index = -1;
-				while (++index < 4)
+				setNullTab(tab, 1, 1, begin);
+				setNullTab(tab, 1, 1, begin - 1);
+				id = fork();
+				if (id == 0)
 				{
-					if (check(tab, i, j, depth, &nb, index))
-						res += hash(tab);
-					if (nb >= 4)
-						break ;
+					tab[1][1] = res;
+					printf("Child process \n");
+					show("test", tab);
+					return (0);
 				}
+				waitpid(id, NULL, 0);
 			}
 		}
+		else
+			res = 0;
+		i++;
 	}
+	return (0);
+}
+
+int	loop(int tab[3][3], int depth)
+{
+	int res;
+
+	(void)tab;
+	(void)depth;
+	res = 0;
+	routine(tab, depth, 0);
 	return (res);
 }
 
@@ -167,13 +130,25 @@ int main()
 
 	printf("depth : ");
 	scanf("%d", &depth);
-	for (int i = 0; i < 3; i++) {
-		for (int j = 0; j < 3; j++) {
-			printf("tab [%d][%d] : ", i ,j);
-			scanf("%d", &value);
-			tab[i][j] = value;
-		}
-	}
+	// for (int i = 0; i < 3; i++) {
+	// 	for (int j = 0; j < 3; j++) {
+	// 		printf("tab [%d][%d] : ", i ,j);
+	// 		scanf("%d", &value);
+	// 		tab[i][j] = value;
+	// 	}
+	// }
+
+	tab[0][0] = 0;
+	tab[0][1] = 6;
+	tab[0][2] = 0;
+
+	tab[1][0] = 1;
+	tab[1][1] = 0;
+	tab[1][2] = 1;
+
+	tab[2][0] = 0;
+	tab[2][1] = 1;
+	tab[2][2] = 0;
 
 	// Write an action using printf(). DON'T FORGET THE TRAILING \n
 	// To debug: fprintf(stderr, "Debug messages...\n");
