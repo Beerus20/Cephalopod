@@ -9,18 +9,14 @@ int check(int tab[3][3], int i, int j, int index)
 	return (func[index](tab, i, j));
 }
 
-int hash(int tab[3][3])
+void	lock(int semid)
 {
-	return (\
-		((tab[0][0] * 10e8) + \
-		(tab[0][1] * 10e7) + \
-		(tab[0][2] * 10e6) + \
-		(tab[1][0] * 10e5) + \
-		(tab[1][1] * 10e4) + \
-		(tab[1][2] * 10e3) + \
-		(tab[2][0] * 10e2) + \
-		(tab[2][1] * 10e1) + \
-		(tab[2][2] * 10e0) * (1 << 30)));
+	semop(semid, &(struct sembuf){0, -1, SEM_UNDO}, 1);
+}
+
+void	unlock(int semid)
+{
+	semop(semid, &(struct sembuf){0, 1, SEM_UNDO}, 1);
 }
 
 void	setNullTab(int tab[3][3], int i, int j, int index, int nb)
@@ -51,7 +47,7 @@ void	setNullTab(int tab[3][3], int i, int j, int index, int nb)
 	}
 }
 
-int	routine(int tab[3][3], int i, int j, int depth, int begin)
+int	routine(int tab[3][3], int i, int j, int depth, int begin, t_res *result)
 {
 	int	index;
 	int	tmp;
@@ -62,7 +58,6 @@ int	routine(int tab[3][3], int i, int j, int depth, int begin)
 	nb = 0;
 	tmp = 0;
 	res = 0;
-	(void)depth;
 	while (++index < 4)
 	{
 		tmp = check(tab, i, j, begin);
@@ -81,6 +76,10 @@ int	routine(int tab[3][3], int i, int j, int depth, int begin)
 					tab[i][j] = res;
 					printf("Child process \n");
 					show("test", tab);
+					lock(result->sem_id);
+					result->value += hash(tab) % (1 << 30);
+					unlock(result->sem_id);
+					loop(tab, --depth, result);
 					exit(0);
 				}
 				wait(NULL);
@@ -94,16 +93,15 @@ int	routine(int tab[3][3], int i, int j, int depth, int begin)
 	return (nb);
 }
 
-int	loop(int tab[3][3], int depth)
+int	loop(int tab[3][3], int depth, t_res *result)
 {
-	int res;
+	int nb;
 	int	begin;
 	int	fd[2];
 
-	(void)tab;
-	(void)depth;
-	(void)res;
-	res = 0;
+	nb = 0;
+	if (depth <= 0)
+		return (nb);
 	for (int i = 0; i < 3; i++)
 	{
 		for (int j = 0; j < 3; j++)
@@ -119,15 +117,15 @@ int	loop(int tab[3][3], int depth)
 					{
 						close(fd[0]);
 						printf("%d =======================================\n", begin);
-						res = routine(tab, i, j, depth, begin);
-						write(fd[1], &res, sizeof(int));
+						nb = routine(tab, i, j, depth, begin, result);
+						write(fd[1], &nb, sizeof(int));
 						close(fd[1]);
 						exit(0);
 					}
 					wait(NULL);
 					close(fd[1]);
-					read(fd[0], &res, sizeof(int));
-					if (res == 4)
+					read(fd[0], &nb, sizeof(int));
+					if (nb == 4)
 						break ;
 					close(fd[0]);
 
@@ -135,15 +133,28 @@ int	loop(int tab[3][3], int depth)
 			}
 		}
 	}
-	return (res);
+	return (nb);
 }
 
 int main()
 {
-	int depth;
-	int tab[3][3];
-	int value;
+	int		depth;
+	int		tab[3][3];
+	int		value;
+	int		shm_id;
+	t_res	*result;
+	t_sem	sem;
 
+	shm_id = shmget(SHM_KEY, SHM_SIZE, 0666 | IPC_CREAT);
+	if (shm_id == -1)
+		exit(1);
+	result = (t_res *)shmat(shm_id, NULL, 0);
+	if (result == (void *)-1)
+		exit(1);
+	result->value = 0;
+	result->sem_id = semget(SEM_KEY, 1, 0666 | IPC_CREAT);
+	if (result->sem_id == -1)
+		exit(1);
 	printf("depth : ");
 	scanf("%d", &depth);
 	// for (int i = 0; i < 3; i++) {
@@ -154,7 +165,7 @@ int main()
 	// 	}
 	// }
 
-	tab[0][0] = 0;
+	tab[0][0] = 1;
 	tab[0][1] = 1;
 	tab[0][2] = 0;
 
@@ -169,8 +180,15 @@ int main()
 	// Write an action using printf(). DON'T FORGET THE TRAILING \n
 	// To debug: fprintf(stderr, "Debug messages...\n");
 	show("init", tab);
-	value = loop(tab, depth);
-	printf("%d\n", value);
+	sem.val = 1;
+	if (semctl(result->sem_id, 0, SETVAL, sem) == -1)
+		exit(1);
+	value = loop(tab, depth, result);
+	printf("%d result : %d\n", value, result->value);
+
+	semctl(result->sem_id, 0, IPC_RMID, sem);
+	shmdt(result);
+	shmctl(shm_id, IPC_RMID, NULL);
 
 	return 0;
 }

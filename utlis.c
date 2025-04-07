@@ -1,5 +1,19 @@
 #include "main.h"
 
+int hash(int tab[3][3])
+{
+	return (\
+		((tab[0][0] * 10e7) + \
+		(tab[0][1] * 10e6) + \
+		(tab[0][2] * 10e5) + \
+		(tab[1][0] * 10e4) + \
+		(tab[1][1] * 10e3) + \
+		(tab[1][2] * 10e2) + \
+		(tab[2][0] * 10e1) + \
+		(tab[2][1] * 10e0) + \
+		(tab[2][2])));
+}
+
 int top(int tab[3][3], int i, int j)
 {
 	if (i - 1 >= 0 && tab[i - 1][j] && tab[i - 1][j] < 6)
@@ -38,7 +52,7 @@ void	show(char *label, int tab[3][3])
 			printf(" %d ", tab[i][j]);
 		printf("]\n");
 	}
-	printf("\n");
+	printf("hash : %d\n", hash(tab) % (1 << 30));
 }
 
 void	showc(char *label, int tab[3][3], int a, int b)
