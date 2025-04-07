@@ -14,5 +14,6 @@ int 	right(int tab[3][3], int i, int j);
 int 	bottom(int tab[3][3], int i, int j);
 int 	left(int tab[3][3], int i, int j);
 void	show(char *label, int tab[3][3]);
+void	showc(char *label, int tab[3][3], int a, int b);
 
 #endif

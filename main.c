@@ -51,56 +51,90 @@ void	setNullTab(int tab[3][3], int i, int j, int index, int nb)
 	}
 }
 
-int	routine(int tab[3][3], int depth, int begin)
+int	routine(int tab[3][3], int i, int j, int depth, int begin)
 {
-	int	i;
+	int	index;
 	int	tmp;
 	int	nb;
 	int	res;
 
-	i = -1;
+	index = -1;
 	nb = 0;
 	tmp = 0;
 	res = 0;
 	(void)depth;
-	while (++i < 4)
+	while (++index < 4)
 	{
-		tmp = check(tab, 1, 1, begin);
+		tmp = check(tab, i, j, begin);
 		if (tmp)
 		{
 			res += tmp;
-			printf("res : %d %d\n", res, tmp);
-			nb++;
-			if (nb >= 2 && res <= 6)
+			printf("res : %d %d, begin : %d\n", res, tmp, begin);
+			if (++nb >= 2)
 			{
-				setNullTab(tab, 1, 1, begin, nb);
+				if (res > 6)
+					return (0);
+				setNullTab(tab, i, j, begin, nb);
 				if (fork() == 0)
 				{
-					tab[1][1] = res;
+					printf("nb : %d\n", nb);
+					tab[i][j] = res;
 					printf("Child process \n");
 					show("test", tab);
-					return (0);
+					exit(0);
 				}
 				wait(NULL);
 			}
 		}
 		else
-			return (0);
+			return (nb);
 		if (++begin == 4)
 			begin = 0;
 	}
-	return (res);
+	return (nb);
 }
 
 int	loop(int tab[3][3], int depth)
 {
 	int res;
+	int	begin;
+	int	fd[2];
 
 	(void)tab;
 	(void)depth;
+	(void)res;
 	res = 0;
-	if (!routine(tab, depth, 0))
-		return (0);
+	for (int i = 0; i < 3; i++)
+	{
+		for (int j = 0; j < 3; j++)
+		{
+			if (!tab[i][j])
+			{
+				showc("test", tab, i, j);
+				begin = -1;
+				while (++begin < 4)
+				{
+					pipe(fd);
+					if (fork() == 0)
+					{
+						close(fd[0]);
+						printf("%d =======================================\n", begin);
+						res = routine(tab, i, j, depth, begin);
+						write(fd[1], &res, sizeof(int));
+						close(fd[1]);
+						exit(0);
+					}
+					wait(NULL);
+					close(fd[1]);
+					read(fd[0], &res, sizeof(int));
+					if (res == 4)
+						break ;
+					close(fd[0]);
+
+				}
+			}
+		}
+	}
 	return (res);
 }
 
@@ -121,12 +155,12 @@ int main()
 	// }
 
 	tab[0][0] = 0;
-	tab[0][1] = 0;
+	tab[0][1] = 1;
 	tab[0][2] = 0;
 
 	tab[1][0] = 1;
 	tab[1][1] = 0;
-	tab[1][2] = 0;
+	tab[1][2] = 4;
 
 	tab[2][0] = 0;
 	tab[2][1] = 1;
