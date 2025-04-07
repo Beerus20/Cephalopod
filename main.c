@@ -139,7 +139,7 @@ int	loop(int tab[3][3], int depth, t_res *result)
 	return (nb);
 }
 
-void	test(t_res *res)
+void	test(t_res *res, int i)
 {
 	typedef struct s_test
 	{
@@ -149,10 +149,8 @@ void	test(t_res *res)
 	}	t_test;
 	
 	t_test	checker[5];
-	int		i;
 	time_t	begin;
 
-	i = 1;
 	checker[0] = (t_test){20, {{0, 6, 0}, {2, 2, 2}, {1, 6, 1}}, 322444322};
 	checker[1] = (t_test){20, {{5, 0, 6}, {4, 5, 0}, {0, 6, 4}}, 951223336};
 	checker[2] = (t_test){1, {{5, 5, 5}, {0, 0, 5}, {5, 5, 5}}, 36379286};
@@ -170,10 +168,10 @@ void	test(t_res *res)
 	begin = time(NULL);
 	loop(checker[i].tab, checker[i].depth, res);
 	printf("final result : %d %d %s\e[0;0m\n", res->value, checker[i].result, res->value == checker[i].result ? "\e[0;92mOK" : "\e[0;91mKO");
-	printf("timer : %f\n", difftime(time(NULL), begin));
+	printf("timer : %ld\n", (unsigned long)difftime(time(NULL), begin));
 }
 
-int main()
+int main(int argc, char **argv)
 {
 	int		depth;
 	int		tab[3][3];
@@ -207,7 +205,7 @@ int main()
 	sem.val = 1;
 	if (semctl(result->sem_id, 0, SETVAL, sem) == -1)
 		exit(1);
-	test(result);
+	test(result, argv[1][0] -'0');
 	// value = loop(tab, depth, result);
 	// printf("%d result : %d\n", value, result->value);
 
