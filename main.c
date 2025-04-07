@@ -64,7 +64,6 @@ int	routine(int tab[3][3], int i, int j, int depth, int begin, t_res *result)
 		if (tmp)
 		{
 			res += tmp;
-			printf("res : %d %d, begin : %d\n", res, tmp, begin);
 			if (++nb >= 2)
 			{
 				if (res > 6)
@@ -72,10 +71,7 @@ int	routine(int tab[3][3], int i, int j, int depth, int begin, t_res *result)
 				setNullTab(tab, i, j, begin, nb);
 				if (fork() == 0)
 				{
-					printf("nb : %d\n", nb);
 					tab[i][j] = res;
-					printf("Child process \n");
-					show("test", tab);
 					lock(result->sem_id);
 					result->value += hash(tab) % (1 << 30);
 					unlock(result->sem_id);
@@ -97,42 +93,84 @@ int	loop(int tab[3][3], int depth, t_res *result)
 {
 	int nb;
 	int	begin;
+	int	zero;
 
 	nb = 0;
+	zero = 0;
 	if (depth <= 0)
+	{
+		lock(result->sem_id);
+		result->value = (result->value + hash(tab)) % (1 << 30);
+		unlock(result->sem_id);
 		return (nb);
+	}
 	for (int i = 0; i < 3; i++)
 	{
 		for (int j = 0; j < 3; j++)
 		{
 			if (!tab[i][j])
 			{
+				zero = 1;
 				if (fork() == 0)
 				{
 					tab[i][j] = 1;
-					showc("test", tab, i, j);
 					begin = -1;
 					while (++begin < 4)
 					{
-						printf("%d =======================================\n", begin);
 						if (routine(tab, i, j, depth, begin, result) == 4)
 							break ;
 
 					}
 					if (tab[i][j] == 1)
-					{
-						lock(result->sem_id);
-						result->value = (result->value + hash(tab) % (1 << 30));
-						unlock(result->sem_id);
 						loop(tab, --depth, result);
-					}
 					exit(0);
 				}
 				wait(NULL);
 			}
 		}
 	}
+	if (!zero)
+	{
+		lock(result->sem_id);
+		result->value = (result->value + hash(tab)) % (1 << 30);
+		unlock(result->sem_id);
+		return (nb);
+	}
 	return (nb);
+}
+
+void	test(t_res *res)
+{
+	typedef struct s_test
+	{
+		int	depth;
+		int	tab[3][3];
+		int	result;
+	}	t_test;
+	
+	t_test	checker[5];
+	int		i;
+	time_t	begin;
+
+	i = 1;
+	checker[0] = (t_test){20, {{0, 6, 0}, {2, 2, 2}, {1, 6, 1}}, 322444322};
+	checker[1] = (t_test){20, {{5, 0, 6}, {4, 5, 0}, {0, 6, 4}}, 951223336};
+	checker[2] = (t_test){1, {{5, 5, 5}, {0, 0, 5}, {5, 5, 5}}, 36379286};
+	checker[3] = (t_test){1, {{6, 1, 6}, {1, 0, 1}, {6, 1, 6}}, 264239762};
+	checker[4] = (t_test){8, {{6, 0, 6}, {0, 0, 0}, {6, 1, 5}}, 76092874};
+	// checker[5] = (t_test){24, (int [3][3]){{3, 0, 0}, {3, 6, 2}, {1, 0, 2}}, 661168294};
+	// checker[6] = (t_test){36, (int [3][3]){{6, 0, 4}, {2, 0, 2}, {4, 0, 0}}, };
+	// checker[7] = (t_test){20, (int [3][3]){{0, 6, 0}, {2, 2, 2}, {1, 6, 1}}, };
+	// checker[8] = (t_test){20, (int [3][3]){{0, 6, 0}, {2, 2, 2}, {1, 6, 1}}, };
+	// checker[9] = (t_test){20, (int [3][3]){{0, 6, 0}, {2, 2, 2}, {1, 6, 1}}, };
+	// checker[10] = (t_test){20, (int [3][3]){{0, 6, 0}, {2, 2, 2}, {1, 6, 1}}, };
+	// checker[11] = (t_test){20, (int [3][3]){{0, 6, 0}, {2, 2, 2}, {1, 6, 1}}, };
+	// checker[12] = (t_test){20, (int [3][3]){{0, 6, 0}, {2, 2, 2}, {1, 6, 1}}, };
+	res->value = 0;
+	begin = time(NULL);
+	loop(checker[i].tab, checker[i].depth, res);
+	printf("final result : %d %d %s\e[0;0m\n", res->value, checker[i].result, res->value == checker[i].result ? "\e[0;92mOK" : "\e[0;91mKO");
+	printf("timer : %f\n", difftime(time(NULL), begin));
 }
 
 int main()
@@ -154,8 +192,8 @@ int main()
 	result->sem_id = semget(SEM_KEY, 1, 0666 | IPC_CREAT);
 	if (result->sem_id == -1)
 		exit(1);
-	printf("depth : ");
-	scanf("%d", &depth);
+	// printf("depth : ");
+	// scanf("%d", &depth);
 	// for (int i = 0; i < 3; i++) {
 	// 	for (int j = 0; j < 3; j++) {
 	// 		printf("tab [%d][%d] : ", i ,j);
@@ -164,26 +202,14 @@ int main()
 	// 	}
 	// }
 
-	tab[0][0] = 0;
-	tab[0][1] = 0;
-	tab[0][2] = 0;
-
-	tab[1][0] = 0;
-	tab[1][1] = 0;
-	tab[1][2] = 0;
-
-	tab[2][0] = 0;
-	tab[2][1] = 0;
-	tab[2][2] = 0;
-
 	// Write an action using printf(). DON'T FORGET THE TRAILING \n
 	// To debug: fprintf(stderr, "Debug messages...\n");
-	show("init", tab);
 	sem.val = 1;
 	if (semctl(result->sem_id, 0, SETVAL, sem) == -1)
 		exit(1);
-	value = loop(tab, depth, result);
-	printf("%d result : %d\n", value, result->value);
+	test(result);
+	// value = loop(tab, depth, result);
+	// printf("%d result : %d\n", value, result->value);
 
 	semctl(result->sem_id, 0, IPC_RMID, sem);
 	shmdt(result);

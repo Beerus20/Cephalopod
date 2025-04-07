@@ -10,6 +10,7 @@
 # include <sys/ipc.h>
 # include <sys/shm.h>
 # include <sys/sem.h>
+# include <time.h>
 
 #define SHM_SIZE sizeof(int)
 #define SHM_KEY 1234
