@@ -97,7 +97,6 @@ int	loop(int tab[3][3], int depth, t_res *result)
 {
 	int nb;
 	int	begin;
-	int	fd[2];
 
 	nb = 0;
 	if (depth <= 0)
@@ -108,28 +107,28 @@ int	loop(int tab[3][3], int depth, t_res *result)
 		{
 			if (!tab[i][j])
 			{
-				showc("test", tab, i, j);
-				begin = -1;
-				while (++begin < 4)
+				if (fork() == 0)
 				{
-					pipe(fd);
-					if (fork() == 0)
+					tab[i][j] = 1;
+					showc("test", tab, i, j);
+					begin = -1;
+					while (++begin < 4)
 					{
-						close(fd[0]);
 						printf("%d =======================================\n", begin);
-						nb = routine(tab, i, j, depth, begin, result);
-						write(fd[1], &nb, sizeof(int));
-						close(fd[1]);
-						exit(0);
-					}
-					wait(NULL);
-					close(fd[1]);
-					read(fd[0], &nb, sizeof(int));
-					if (nb == 4)
-						break ;
-					close(fd[0]);
+						if (routine(tab, i, j, depth, begin, result) == 4)
+							break ;
 
+					}
+					if (tab[i][j] == 1)
+					{
+						lock(result->sem_id);
+						result->value = (result->value + hash(tab) % (1 << 30));
+						unlock(result->sem_id);
+						loop(tab, --depth, result);
+					}
+					exit(0);
 				}
+				wait(NULL);
 			}
 		}
 	}
@@ -165,16 +164,16 @@ int main()
 	// 	}
 	// }
 
-	tab[0][0] = 1;
-	tab[0][1] = 1;
+	tab[0][0] = 0;
+	tab[0][1] = 0;
 	tab[0][2] = 0;
 
-	tab[1][0] = 1;
+	tab[1][0] = 0;
 	tab[1][1] = 0;
-	tab[1][2] = 4;
+	tab[1][2] = 0;
 
 	tab[2][0] = 0;
-	tab[2][1] = 1;
+	tab[2][1] = 0;
 	tab[2][2] = 0;
 
 	// Write an action using printf(). DON'T FORGET THE TRAILING \n
