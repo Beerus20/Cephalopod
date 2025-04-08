@@ -39,7 +39,8 @@ void	loop(t_grid *grid, int depth, int *content);
 // int 	left(t_grid *grid, int i, int j);
 // void	show(char *label, t_grid *grid);
 // void	showc(char *label, t_grid *grid, int a, int b);
-int		hash(t_grid *grid);
+int		hash(int *content);
 void	show(char *label, int grid[9]);
+void	showc(char *label, int grid[9], int id);
 
 #endif

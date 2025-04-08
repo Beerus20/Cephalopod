@@ -1,17 +1,17 @@
 #include "main.h"
 
-inline int hash(t_grid *grid)
+inline int hash(int *content)
 {
 	return ((\
-		(grid->content[0] * 10e7) + \
-		(grid->content[1] * 10e6) + \
-		(grid->content[2] * 10e5) + \
-		(grid->content[3] * 10e4) + \
-		(grid->content[4] * 10e3) + \
-		(grid->content[5] * 10e2) + \
-		(grid->content[6] * 10e1) + \
-		(grid->content[7] * 10e0) + \
-		(grid->content[8])));
+		(content[0] * 10e7) + \
+		(content[1] * 10e6) + \
+		(content[2] * 10e5) + \
+		(content[3] * 10e4) + \
+		(content[4] * 10e3) + \
+		(content[5] * 10e2) + \
+		(content[6] * 10e1) + \
+		(content[7] * 10e0) + \
+		(content[8])));
 }
 
 // inline int top(t_grid *grid, int i, int j)
@@ -43,6 +43,23 @@ void	show(char *label, int grid[9])
 			printf("\n %d ", grid[i]);
 		else
 			printf(" %d ", grid[i]);
+	}
+	printf("\n");
+}
+
+void	showc(char *label, int grid[9], int id)
+{
+	printf("label : %s", label);
+	for (int i = 0; i < 9; i++)
+	{
+		if (i == id)
+			printf("\e[0;32m");
+		if (i % 3 == 0)
+			printf("\n %d ", grid[i]);
+		else
+			printf(" %d ", grid[i]);
+		if (i == id)
+			printf("\e[0;0m");
 	}
 	printf("\n");
 }
