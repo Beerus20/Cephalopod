@@ -30,12 +30,12 @@ typedef struct s_res
 
 typedef struct s_grid
 {
-	int	nb_empty;
-	int	content[3][3];
+	int		nb_empty;
+	int		content[3][3];
+	t_res	*result;
 }	t_grid;
 
-
-void	loop(t_grid *grid, int depth, t_res *result);
+void	loop(t_grid *grid, int depth);
 int 	top(t_grid *grid, int i, int j);
 int 	right(t_grid *grid, int i, int j);
 int 	bottom(t_grid *grid, int i, int j);

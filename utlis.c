@@ -1,6 +1,6 @@
 #include "main.h"
 
-int hash(t_grid *grid)
+inline int hash(t_grid *grid)
 {
 	return (\
 		((grid->content[0][0] * 10e7) + \
@@ -14,32 +14,24 @@ int hash(t_grid *grid)
 		(grid->content[2][2])));
 }
 
-int top(t_grid *grid, int i, int j)
+inline int top(t_grid *grid, int i, int j)
 {
-	if (i - 1 >= 0)
-		return (grid->content[i - 1][j]);
-	return (0);
+	return (i - 1 >= 0 ? grid->content[i - 1][j] : 0);
 }
 
-int right(t_grid *grid, int i, int j)
+inline int right(t_grid *grid, int i, int j)
 {
-	if (j + 1 < 3)
-		return (grid->content[i][j + 1]);
-	return (0);
+	return (j + 1 < 3 ? grid->content[i][j + 1] : 0);
 }
 
-int bottom(t_grid *grid, int i, int j)
+inline int bottom(t_grid *grid, int i, int j)
 {
-	if (i + 1 < 3)
-		return (grid->content[i + 1][j]);
-	return (0);
+	return (i + 1 < 3 ? grid->content[i + 1][j] : 0);
 }
 
-int left(t_grid *grid, int i, int j)
+inline int left(t_grid *grid, int i, int j)
 {
-	if (j - 1 >= 0)
-		return (grid->content[i][j - 1]);
-	return (0);
+	return (j - 1 >= 0 ? grid->content[i][j - 1] : 0);
 }
 
 void	show(char *label, t_grid *grid)
