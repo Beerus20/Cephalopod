@@ -10,7 +10,7 @@
 # include <sys/ipc.h>
 # include <sys/shm.h>
 # include <sys/sem.h>
-# include <time.h>
+# include <sys/time.h>
 
 #define SHM_SIZE sizeof(int)
 #define SHM_KEY 1234
@@ -28,13 +28,20 @@ typedef struct s_res
 	int	value;
 }	t_res;
 
-int		loop(int tab[3][3], int depth, t_res *result);
-int 	top(int tab[3][3], int i, int j);
-int 	right(int tab[3][3], int i, int j);
-int 	bottom(int tab[3][3], int i, int j);
-int 	left(int tab[3][3], int i, int j);
-void	show(char *label, int tab[3][3]);
-void	showc(char *label, int tab[3][3], int a, int b);
-int		hash(int tab[3][3]);
+typedef struct s_grid
+{
+	int	nb_empty;
+	int	content[3][3];
+}	t_grid;
+
+
+void	loop(t_grid *grid, int depth, t_res *result);
+int 	top(t_grid *grid, int i, int j);
+int 	right(t_grid *grid, int i, int j);
+int 	bottom(t_grid *grid, int i, int j);
+int 	left(t_grid *grid, int i, int j);
+void	show(char *label, t_grid *grid);
+void	showc(char *label, t_grid *grid, int a, int b);
+int		hash(t_grid *grid);
 
 #endif

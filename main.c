@@ -1,12 +1,12 @@
 #include "main.h"
 
-typedef int  (*t_func)(int [3][3], int, int);
+typedef int  (*t_func)(t_grid *, int, int);
 
-int check(int tab[3][3], int i, int j, int index)
+int check(t_grid *grid, int i, int j, int index)
 {
 	static t_func func[] = {top, right, bottom, left};
 
-	return (func[index](tab, i, j));
+	return (func[index](grid, i, j));
 }
 
 void	lock(int semid)
@@ -19,21 +19,21 @@ void	unlock(int semid)
 	semop(semid, &(struct sembuf){0, 1, SEM_UNDO}, 1);
 }
 
-void	setNullTab(int tab[3][3], int i, int j, int index, int nb)
+void	setNullGrid(t_grid *grid, int i, int j, int index, int nb)
 {
 	switch (index)
 	{
 		case 0:
-			tab[i - 1][j] = 0;
+			grid->content[i - 1][j] = 0;
 			break;
 		case 1:
-			tab[i][j + 1] = 0;
+			grid->content[i][j + 1] = 0;
 			break;
 		case 2:
-			tab[i + 1][j] = 0;
+			grid->content[i + 1][j] = 0;
 			break;
 		case 3:
-			tab[i][j - 1] = 0;
+			grid->content[i][j - 1] = 0;
 			break;
 		default:
 			break;
@@ -41,88 +41,68 @@ void	setNullTab(int tab[3][3], int i, int j, int index, int nb)
 	if (nb == 2)
 	{
 		if (index == 0)
-			setNullTab(tab, i, j, 3, 0);
+			setNullGrid(grid, i, j, 3, 0);
 		else
-			setNullTab(tab, i, j, index - 1, 0);
+			setNullGrid(grid, i, j, index - 1, 0);
 	}
 }
 
-int	routine(int tab[3][3], int i, int j, int depth, int begin, t_res *result)
+void	routine_test(t_grid *grid, int i, int j, int depth, int begin, t_res *result)
 {
-	int	index;
 	int	tmp;
-	int	nb;
 	int	res;
 
-	index = -1;
-	nb = 0;
 	tmp = 0;
 	res = 0;
-	while (++index < 4)
+	tmp = check(grid, i, j, begin);
+	if (tmp)
 	{
-		tmp = check(tab, i, j, begin);
-		if (tmp)
+		res += tmp;
+		setNullGrid(grid, i, j, begin, 0);
+		if (!fork())
 		{
-			res += tmp;
-			if (++nb >= 2)
-			{
-				if (res > 6)
-					return (0);
-				setNullTab(tab, i, j, begin, nb);
-				if (fork() == 0)
-				{
-					tab[i][j] = res;
-					lock(result->sem_id);
-					result->value += hash(tab) % (1 << 30);
-					unlock(result->sem_id);
-					loop(tab, --depth, result);
-					exit(0);
-				}
-				wait(NULL);
-			}
+			grid->content[i][j] = res;
+			show("child process", grid);
+			loop(grid, --depth, result);
+			exit(0);
 		}
-		else
-			return (nb);
-		if (++begin == 4)
-			begin = 0;
+		wait(NULL);
 	}
-	return (nb);
 }
 
-int	loop(int tab[3][3], int depth, t_res *result)
+void	loop(t_grid *grid, int depth, t_res *result)
 {
-	int nb;
 	int	begin;
 	int	zero;
 
-	nb = 0;
+	(void)zero;
 	zero = 0;
 	if (depth <= 0)
 	{
+		show("END", grid);
 		lock(result->sem_id);
-		result->value = (result->value + hash(tab)) % (1 << 30);
+		printf("test before result : %d %d\n", result->value, hash(grid));
+		result->value = (result->value + hash(grid)) % 1073741824;
+		printf("test after result : %d\n\n", result->value);
 		unlock(result->sem_id);
-		return (nb);
+		exit(0);
 	}
 	for (int i = 0; i < 3; i++)
 	{
 		for (int j = 0; j < 3; j++)
 		{
-			if (!tab[i][j])
+			if (!grid->content[i][j])
 			{
 				zero = 1;
 				if (fork() == 0)
 				{
-					tab[i][j] = 1;
+					grid->content[i][j] = 1;
 					begin = -1;
+					showc("template", grid, i, j);
 					while (++begin < 4)
-					{
-						if (routine(tab, i, j, depth, begin, result) == 4)
-							break ;
-
-					}
-					if (tab[i][j] == 1)
-						loop(tab, --depth, result);
+						routine(grid, i, j, depth, begin, result);
+					if (grid->content[i][j] == 1)
+						loop(grid, --depth, result);
 					exit(0);
 				}
 				wait(NULL);
@@ -132,32 +112,30 @@ int	loop(int tab[3][3], int depth, t_res *result)
 	if (!zero)
 	{
 		lock(result->sem_id);
-		result->value = (result->value + hash(tab)) % (1 << 30);
+		result->value = (result->value + hash(grid)) % 1073741824;
 		unlock(result->sem_id);
-		return (nb);
 	}
-	return (nb);
 }
 
 void	test(t_res *res, int i)
 {
 	typedef struct s_test
 	{
-		int	depth;
-		int	tab[3][3];
+		int		depth;
+		t_grid	grid;
 		int	result;
 	}	t_test;
-	
-	t_test	checker[5];
-	time_t	begin;
 
-	checker[0] = (t_test){20, {{0, 6, 0}, {2, 2, 2}, {1, 6, 1}}, 322444322};
-	checker[1] = (t_test){20, {{5, 0, 6}, {4, 5, 0}, {0, 6, 4}}, 951223336};
-	checker[2] = (t_test){1, {{5, 5, 5}, {0, 0, 5}, {5, 5, 5}}, 36379286};
-	checker[3] = (t_test){1, {{6, 1, 6}, {1, 0, 1}, {6, 1, 6}}, 264239762};
-	checker[4] = (t_test){8, {{6, 0, 6}, {0, 0, 0}, {6, 1, 5}}, 76092874};
+	t_test			checker[6];
+	struct timeval	begin, end;
+
+	checker[0] = (t_test){20, {2, {{0, 6, 0}, {2, 2, 2}, {1, 6, 1}}}, 322444322};
+	checker[1] = (t_test){20, {3, {{5, 0, 6}, {4, 5, 0}, {0, 6, 4}}}, 951223336};
+	checker[2] = (t_test){1, {2, {{5, 5, 5}, {0, 0, 5}, {5, 5, 5}}}, 36379286};
+	checker[3] = (t_test){1, {1, {{6, 1, 6}, {1, 0, 1}, {6, 1, 6}}}, 264239762};
+	checker[4] = (t_test){8, {4, {{6, 0, 6}, {0, 0, 0}, {6, 1, 5}}}, 76092874};
+	checker[5] = (t_test){1, {5, {{0, 1, 0}, {1, 0, 1}, {0, 1, 0}}}, 0};
 	// checker[5] = (t_test){24, (int [3][3]){{3, 0, 0}, {3, 6, 2}, {1, 0, 2}}, 661168294};
-	// checker[6] = (t_test){36, (int [3][3]){{6, 0, 4}, {2, 0, 2}, {4, 0, 0}}, };
 	// checker[7] = (t_test){20, (int [3][3]){{0, 6, 0}, {2, 2, 2}, {1, 6, 1}}, };
 	// checker[8] = (t_test){20, (int [3][3]){{0, 6, 0}, {2, 2, 2}, {1, 6, 1}}, };
 	// checker[9] = (t_test){20, (int [3][3]){{0, 6, 0}, {2, 2, 2}, {1, 6, 1}}, };
@@ -165,17 +143,17 @@ void	test(t_res *res, int i)
 	// checker[11] = (t_test){20, (int [3][3]){{0, 6, 0}, {2, 2, 2}, {1, 6, 1}}, };
 	// checker[12] = (t_test){20, (int [3][3]){{0, 6, 0}, {2, 2, 2}, {1, 6, 1}}, };
 	res->value = 0;
-	begin = time(NULL);
-	loop(checker[i].tab, checker[i].depth, res);
+	show("initial grid", &checker[i].grid);
+	gettimeofday(&begin, NULL);
+	loop(&checker[i].grid, checker[i].depth, res);
+	gettimeofday(&end, NULL);
 	printf("final result : %d %d %s\e[0;0m\n", res->value, checker[i].result, res->value == checker[i].result ? "\e[0;92mOK" : "\e[0;91mKO");
-	printf("timer : %ld\n", (unsigned long)difftime(time(NULL), begin));
+	printf("timer : %ld ms\n", ((end.tv_sec - begin.tv_sec) * 1000L + (end.tv_usec - begin.tv_usec) / 1000l));
 }
 
 int main(int argc, char **argv)
 {
-	int		depth;
-	int		tab[3][3];
-	int		value;
+	(void)argc;
 	int		shm_id;
 	t_res	*result;
 	t_sem	sem;
@@ -194,9 +172,9 @@ int main(int argc, char **argv)
 	// scanf("%d", &depth);
 	// for (int i = 0; i < 3; i++) {
 	// 	for (int j = 0; j < 3; j++) {
-	// 		printf("tab [%d][%d] : ", i ,j);
+	// 		printf("grid [%d][%d] : ", i ,j);
 	// 		scanf("%d", &value);
-	// 		tab[i][j] = value;
+	// 		grid->content[i][j] = value;
 	// 	}
 	// }
 
@@ -206,7 +184,7 @@ int main(int argc, char **argv)
 	if (semctl(result->sem_id, 0, SETVAL, sem) == -1)
 		exit(1);
 	test(result, argv[1][0] -'0');
-	// value = loop(tab, depth, result);
+	// value = loop(grid, depth, result);
 	// printf("%d result : %d\n", value, result->value);
 
 	semctl(result->sem_id, 0, IPC_RMID, sem);
