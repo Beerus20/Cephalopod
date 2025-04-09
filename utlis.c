@@ -1,19 +1,5 @@
 #include "main.h"
 
-inline int hash(int *content)
-{
-	return ((\
-		(content[0] * 10e7) + \
-		(content[1] * 10e6) + \
-		(content[2] * 10e5) + \
-		(content[3] * 10e4) + \
-		(content[4] * 10e3) + \
-		(content[5] * 10e2) + \
-		(content[6] * 10e1) + \
-		(content[7] * 10e0) + \
-		(content[8])));
-}
-
 // inline int top(t_grid *grid, int i, int j)
 // {
 // 	return (i - 1 >= 0 ? grid->content[i - 1][j] : 0);
