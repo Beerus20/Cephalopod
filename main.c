@@ -6,88 +6,9 @@ typedef struct	s_arg
 	int			i;
 	t_grid		*grid;
 	int 		depth;
+	int			*content;
 	pthread_t	*pthread;
 }	t_arg;
-
-// int check(t_grid *grid, int i, int j, int index)
-// {
-// 	static t_func func[] = {top, right, bottom, left};
-
-// 	return (func[index](grid, i, j));
-// }
-
-// void	setNullGrid(t_grid *grid, int i, int j, int index, int nb)
-// {
-// 	while (nb >= 0)
-// 	{
-// 		if (index == 0)
-// 			grid->content[i - 1][j] = 0;
-// 		else if (index == 1)
-// 			grid->content[i][j + 1] = 0;
-// 		else if (index == 2)
-// 			grid->content[i + 1][j] = 0;
-// 		else
-// 			grid->content[i][j - 1] = 0;
-// 		if (nb--)
-// 		{
-// 			if (index == 0)
-// 				index = 3;
-// 			else
-// 				index--;
-// 		}
-// 	}
-// }
-
-// int	stars_checking(t_grid *grid, int i, int j, int begin, int depth)
-// {
-// 	int	tmp;
-// 	int	op;
-// 	int	res;
-
-// 	tmp = check(grid, i, j, begin);
-// 	op = check(grid, i, j, begin + 2);
-// 	res = op + tmp;
-// 	if (tmp && op && res <= 6)
-// 	{
-// 		if (fork() == 0)
-// 		{
-// 			setNullGrid(grid, i, j, begin, 0);
-// 			setNullGrid(grid, i, j, begin + 2, 0);
-// 			grid->content[i][j] = res;
-// 			loop(grid, --depth);
-// 			exit(0);
-// 		}
-// 		return (1);
-// 	}
-// 	return (0);
-// }
-
-// int	circle_checking(t_grid *grid, int i, int j, int depth, int begin, int *nb, int value)
-// {
-// 	int	tmp;
-
-// 	if (*nb == 3)
-// 		return (*nb);
-// 	tmp = check(grid, i, j, begin);
-// 	if (!tmp)
-// 		return (*nb >= 2 ? *nb : 0);
-// 	value += tmp;
-// 	if (value <= 6)
-// 	{
-// 		if (*nb >= 1 && fork() == 0)
-// 		{
-// 			setNullGrid(grid, i, j, begin, *nb);
-// 			grid->content[i][j] = value;
-// 			loop(grid, --depth);
-// 			exit(0);
-// 		}
-// 		*nb += 1;
-// 		if (++begin == 4)
-// 			begin = 0;
-// 		circle_checking(grid, i, j, depth, begin, nb, value);
-// 	}
-// 	return (*nb >= 2 ? *nb : 0);
-// }
 
 int	*update(int dest[9], int src[9], int id, int v, int pos[4])
 {
@@ -111,55 +32,55 @@ int	*update(int dest[9], int src[9], int id, int v, int pos[4])
 	return (dest);
 }
 
-void	action(t_arg *arg, int pos[4])
+void	action(t_arg *arg, int *content, int pos[4])
 {
-	static int	tab[12][9] = {0};
+	int	tab[12][9] = {0};
 	int			i;
 
 	i = 0;
 	if (pos[0] && pos[1] && pos[0] + pos[1] <= 6 && ++i)
-		loop(arg->grid, arg->depth - 1, update(tab[0], arg->grid->content, arg->i, pos[0] + pos[1], (int []){pos[0], pos[1], -1, -1}));
+		loop(arg->grid, arg->depth - 1, update(tab[0], content, arg->i, pos[0] + pos[1], (int []){pos[0], pos[1], -1, -1}));
 	if (pos[0] && pos[2] && pos[0] + pos[2] <= 6 && ++i)
-		loop(arg->grid, arg->depth - 1, update(tab[1], arg->grid->content, arg->i, pos[0] + pos[2], (int []){pos[0], -1, pos[2], -1}));
+		loop(arg->grid, arg->depth - 1, update(tab[1], content, arg->i, pos[0] + pos[2], (int []){pos[0], -1, pos[2], -1}));
 	if (pos[0] && pos[3] && pos[0] + pos[3] <= 6 && ++i)
-		loop(arg->grid, arg->depth - 1, update(tab[2], arg->grid->content, arg->i, pos[0] + pos[3], (int []){pos[0], -1, -1, pos[3]}));
+		loop(arg->grid, arg->depth - 1, update(tab[2], content, arg->i, pos[0] + pos[3], (int []){pos[0], -1, -1, pos[3]}));
 
 	if (pos[1] && pos[3] && pos[1] + pos[3] <= 6 && ++i)
-		loop(arg->grid, arg->depth - 1, update(tab[3], arg->grid->content, arg->i, pos[1] + pos[3], (int []){-1, pos[1], -1, pos[3]}));
+		loop(arg->grid, arg->depth - 1, update(tab[3], content, arg->i, pos[1] + pos[3], (int []){-1, pos[1], -1, pos[3]}));
 	if (pos[2] && pos[3] && pos[2] + pos[3] <= 6 && ++i)
-		loop(arg->grid, arg->depth - 1, update(tab[4], arg->grid->content, arg->i, pos[2] + pos[3], (int []){-1, -1, pos[2], pos[3]}));
+		loop(arg->grid, arg->depth - 1, update(tab[4], content, arg->i, pos[2] + pos[3], (int []){-1, -1, pos[2], pos[3]}));
 	if (pos[1] && pos[2] && pos[1] + pos[2] <= 6 && ++i)
-		loop(arg->grid, arg->depth - 1, update(tab[5], arg->grid->content, arg->i, pos[1] + pos[2], (int []){-1, pos[1], pos[2], -1}));
+		loop(arg->grid, arg->depth - 1, update(tab[5], content, arg->i, pos[1] + pos[2], (int []){-1, pos[1], pos[2], -1}));
 
 	if (pos[0] && pos[1] && pos[2] && pos[0] + pos[1] + pos[2] <= 6 && ++i)
-		loop(arg->grid, arg->depth - 1, update(tab[6], arg->grid->content, arg->i, pos[0] + pos[1] + pos[2], (int []){pos[0], pos[1], pos[2], -1}));
+		loop(arg->grid, arg->depth - 1, update(tab[6], content, arg->i, pos[0] + pos[1] + pos[2], (int []){pos[0], pos[1], pos[2], -1}));
 	if (pos[1] && pos[2] && pos[3] && pos[1] + pos[2] + pos[3] <= 6 && ++i)
-		loop(arg->grid, arg->depth - 1, update(tab[7], arg->grid->content, arg->i, pos[1] + pos[2] + pos[3], (int []){-1, pos[1], pos[2], pos[3]}));
+		loop(arg->grid, arg->depth - 1, update(tab[7], content, arg->i, pos[1] + pos[2] + pos[3], (int []){-1, pos[1], pos[2], pos[3]}));
 	if (pos[2] && pos[3] && pos[0] && pos[2] + pos[3] + pos[0]<= 6 && ++i)
-		loop(arg->grid, arg->depth - 1, update(tab[8], arg->grid->content, arg->i, pos[2] + pos[3] + pos[0], (int []){pos[0], -1, pos[2], pos[3]}));
+		loop(arg->grid, arg->depth - 1, update(tab[8], content, arg->i, pos[2] + pos[3] + pos[0], (int []){pos[0], -1, pos[2], pos[3]}));
 	if (pos[3] && pos[0] && pos[1] && pos[3] + pos[0] + pos[1] <= 6 && ++i)
-		loop(arg->grid, arg->depth - 1, update(tab[9], arg->grid->content, arg->i, pos[3] + pos[0] + pos[1], (int []){pos[0], pos[1], -1, pos[3]}));
+		loop(arg->grid, arg->depth - 1, update(tab[9], content, arg->i, pos[3] + pos[0] + pos[1], (int []){pos[0], pos[1], -1, pos[3]}));
 	if (pos[0] && pos[1] && pos[2] && pos[3] && pos[0] + pos[1] + pos[2] + pos[3] <= 6 && ++i)
-		loop(arg->grid, arg->depth - 1, update(tab[10], arg->grid->content, arg->i, pos[0] + pos[1] + pos[2] + pos[3], (int []){pos[0], pos[1], pos[2], pos[3]}));
+		loop(arg->grid, arg->depth - 1, update(tab[10], content, arg->i, pos[0] + pos[1] + pos[2] + pos[3], (int []){pos[0], pos[1], pos[2], pos[3]}));
 	if (!i)
-		loop(arg->grid, arg->depth - 1, update(tab[11], arg->grid->content, arg->i, 1, (int []){-1, -1, -1, -1}));
+		loop(arg->grid, arg->depth - 1, update(tab[11], content, arg->i, 1, (int []){-1, -1, -1, -1}));
 }
 
 int	routine_test(t_arg *arg)
 {
-	int		i; arg->i;
-	int		j;
-	t_grid	*grid = arg->grid;
+	int		i;
 	int		pos[4];
+	int		*content;
 
-	printf("grid[%d] : %d\n", i, grid->content[i]);
-	if (grid->content[i])
+	i = arg->i;
+	content = arg->content ? arg->content : arg->grid->content;
+	if (content[i])
 		return (pthread_detach(*arg->pthread), 0);
-	pos[0] = i - 3 >= 0 ? grid->content[i - 3] : 0;
-	pos[1] = i - 1 >= 0 ? grid->content[i - 1] : 0;
-	pos[2] = i + 1 <= 8 ? grid->content[i + 1] : 0;
-	pos[3] = i + 3 <= 8 ? grid->content[i + 3] : 0;
-	action(arg, pos);
+	pos[0] = i > 2 ? content[i - 3] : 0;
+	pos[1] = i != 0 && i != 3 && i != 6 ? content[i - 1] : 0;
+	pos[2] = i != 2 && i != 5 && i != 8 ? content[i + 1] : 0;
+	pos[3] = i < 6 ? content[i + 3] : 0;
+	action(arg, content, pos);
 	return (0);
 }
 
@@ -172,23 +93,42 @@ void	*lunch(void *arg)
 void	loop(t_grid *grid, int depth, int *content)
 {
 	int			id;
+	int			zero;
+	int			*tab;
 	pthread_t	pthread[9];
+	t_arg		arg;
 
-	if (content && depth <= 0)
+	printf("DEPTH	: %d\n", depth);
+	if (content && depth <= 1)
 	{
+		show("END", content);
 		pthread_mutex_lock(&grid->result->mutex);
-		grid->result->value = (grid->result->value + hash(content));
-		// show("END", content);
+		grid->result->value = (grid->result->value + hash(content)) % (1 << 30);
 		printf("result : %d\n", grid->result->value);
 		pthread_mutex_unlock(&grid->result->mutex);
 		return ;
 	}
 	id = 0;
-	show("test", grid->content);
+	zero = 0;
+	// content ? show("test", content) : 0;
+	tab = content ? content : grid->content;
 	for (int i = 0; i < 9; i++)
 	{
-		pthread_create(&pthread[id], NULL, &lunch, &(t_arg){i, grid, depth, &pthread[i]});
-		pthread_join(pthread[id++], NULL);
+		if (!tab[i])
+		{
+			zero++;
+			arg = (t_arg){i, grid, depth, content, &pthread[i]};
+			pthread_create(&pthread[id], NULL, &lunch, &arg);
+			pthread_join(pthread[id++], NULL);
+		}
+	}
+	if (content && !zero)
+	{
+		show("ZERO", content);
+		pthread_mutex_lock(&grid->result->mutex);
+		grid->result->value = (grid->result->value + hash(content)) % (1 << 30);
+		printf("result : %d\n", grid->result->value);
+		pthread_mutex_unlock(&grid->result->mutex);
 	}
 }
 
@@ -209,9 +149,9 @@ void	test(t_res *res, int i)
 	checker[2] = (t_test){1, {{5, 5, 5, 0, 0, 5, 5, 5, 5}, res}, 36379286};
 	checker[3] = (t_test){1, {{6, 1, 6, 1, 0, 1, 6, 1, 6}, res}, 264239762};
 	checker[4] = (t_test){8, {{6, 0, 6, 0, 0, 0, 6, 1, 5}, res}, 76092874};
-	checker[5] = (t_test){1, {{0, 1, 0, 1, 0, 1, 0, 1, 0}, res}, 0};
+	checker[5] = (t_test){1, {{0, 1, 0, 1, 0, 5, 0, 1, 0}, res}, 0};
 	checker[6] = (t_test){1, {{0, 0, 0, 0, 0, 0, 0, 0, 0}, res}, 0};
-	checker[7] = (t_test){1, {{0, 1, 0, 1, 0, 0, 0, 0, 0}, res}, 0};
+	checker[7] = (t_test){2, {{0, 1, 0, 1, 0, 0, 0, 0, 0}, res}, 0};
 	// checker[5] = (t_test){24, (int [3][3]){{3, 0, 0}, {3, 6, 2}, {1, 0, 2}}, 661168294};
 	// checker[7] = (t_test){20, (int [3][3]){{0, 6, 0}, {2, 2, 2}, {1, 6, 1}}, };
 	// checker[8] = (t_test){20, (int [3][3]){{0, 6, 0}, {2, 2, 2}, {1, 6, 1}}, };
