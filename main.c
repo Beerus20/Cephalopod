@@ -18,20 +18,20 @@ typedef struct s_res
 
 typedef struct s_grid
 {
-	__uint32_t		content[9];
-	t_res	*result;
+	__uint8_t	content[9];
+	t_res		*result;
 }	t_grid;
 
 typedef struct	s_arg
 {
 	__uint32_t	i;
 	t_grid		*grid;
-	__uint32_t 	depth;
-	__uint32_t	*content;
+	__uint8_t 	depth;
+	__uint8_t	*content;
 }	t_arg;
 
-__uint32_t	loop(t_grid *restrict grid, __uint32_t depth, __uint32_t *restrict content);
-__uint32_t	hash(__uint32_t *content);
+__uint32_t	loop(t_grid *restrict grid, __uint8_t depth, __uint8_t *restrict content);
+__uint32_t	hash(__uint8_t *content);
 
 long long	**g_state;
 __uint32_t	*g_result;
@@ -51,7 +51,7 @@ __uint32_t	final_result(void)
 	return (res);
 }
 
-inline __uint32_t hash(__uint32_t *content)
+__uint32_t hash(__uint8_t *content)
 {
 	if (!content)
 		return (0);
@@ -66,32 +66,31 @@ inline __uint32_t hash(__uint32_t *content)
 		(content[7] * 10e0) + \
 		(content[8])));
 }
-__uint32_t	*update(__uint32_t *restrict dest, __uint32_t *restrict src, __uint32_t id, __uint32_t v, __uint32_t *restrict pos)
+__uint8_t	*update(__uint8_t *restrict dest, __uint8_t *restrict src, __uint8_t id, __uint8_t v, __uint8_t *restrict pos)
 {
-	__uint32_t	i;
+	__uint8_t	i;
 
 	i = -1;
 	while (++i < 9)
 	{
 		dest[i] = id == i ? v : src[i];
-		if (pos[0] != -1 && i + 3 == id)
+		if (pos[0] != 7 && i + 3 == id)
 			dest[i] = 0;
-		if (pos[1] != -1 && i + 1 == id)
+		if (pos[1] != 7 && i + 1 == id)
 			dest[i] = 0;
-		if (pos[2] != -1 && i - 1 == id)
+		if (pos[2] != 7 && i - 1 == id)
 			dest[i] = 0;
-		if (pos[3] != -1 && i - 3 == id)
+		if (pos[3] != 7 && i - 3 == id)
 			dest[i] = 0;
 	}
 	return (dest);
 }
 
-void	execution(t_arg *restrict arg, __uint32_t *restrict content, __uint32_t res, __uint32_t pos[4]);
-inline void	execution(t_arg *restrict arg, __uint32_t *restrict content, __uint32_t res, __uint32_t pos[4])
+void	execution(t_arg *restrict arg, __uint8_t *restrict content, __uint8_t res, __uint8_t pos[4])
 {
-	__uint32_t	dest[9];
 	__uint32_t	vhash;
-	__uint32_t	value;
+	__uint8_t	dest[9];
+	__uint8_t	value;
 
 	vhash = hash(update(dest, content, arg->i, res, pos));
 	if (g_state[arg->depth][vhash] == 0)
@@ -99,68 +98,64 @@ inline void	execution(t_arg *restrict arg, __uint32_t *restrict content, __uint3
 	result = (result + g_state[arg->depth][vhash]) % MODULO;
 }
 
-void	action(t_arg *restrict arg, __uint32_t *restrict content, __uint32_t pos[4]);
-inline void	action(t_arg *restrict arg, __uint32_t *restrict content, __uint32_t pos[4])
+void	action(t_arg *restrict arg, __uint8_t *restrict content, __uint8_t pos[4])
 {
 	__uint32_t	i;
 
 	i = 0;
 	if (pos[0] && pos[1] && pos[0] + pos[1] <= 6 && ++i)
-		execution(arg, content, pos[0] + pos[1], (__uint32_t []){pos[0], pos[1], -1, -1});
+		execution(arg, content, pos[0] + pos[1], (__uint8_t []){pos[0], pos[1], 7, 7});
 	if (pos[0] && pos[2] && pos[0] + pos[2] <= 6 && ++i)
-		execution(arg, content, pos[0] + pos[2], (__uint32_t []){pos[0], -1, pos[2], -1});
+		execution(arg, content, pos[0] + pos[2], (__uint8_t []){pos[0], 7, pos[2], 7});
 	if (pos[0] && pos[3] && pos[0] + pos[3] <= 6 && ++i)
-		execution(arg, content, pos[0] + pos[3], (__uint32_t []){pos[0], -1, -1, pos[3]});
+		execution(arg, content, pos[0] + pos[3], (__uint8_t []){pos[0], 7, 7, pos[3]});
 	if (pos[1] && pos[3] && pos[1] + pos[3] <= 6 && ++i)
-		execution(arg, content, pos[1] + pos[3], (__uint32_t []){-1, pos[1], -1, pos[3]});
+		execution(arg, content, pos[1] + pos[3], (__uint8_t []){7, pos[1], 7, pos[3]});
 	if (pos[2] && pos[3] && pos[2] + pos[3] <= 6 && ++i)
-		execution(arg, content, pos[2] + pos[3], (__uint32_t []){-1, -1, pos[2], pos[3]});
+		execution(arg, content, pos[2] + pos[3], (__uint8_t []){7, 7, pos[2], pos[3]});
 	if (pos[1] && pos[2] && pos[1] + pos[2] <= 6 && ++i)
-		execution(arg, content, pos[1] + pos[2], (__uint32_t []){-1, pos[1], pos[2], -1});
+		execution(arg, content, pos[1] + pos[2], (__uint8_t []){7, pos[1], pos[2], 7});
 	if (pos[0] && pos[1] && pos[2] && pos[0] + pos[1] + pos[2] <= 6 && ++i)
-		execution(arg, content, pos[0] + pos[1] + pos[2], (__uint32_t []){pos[0], pos[1], pos[2], -1});
+		execution(arg, content, pos[0] + pos[1] + pos[2], (__uint8_t []){pos[0], pos[1], pos[2], 7});
 	if (pos[1] && pos[2] && pos[3] && pos[1] + pos[2] + pos[3] <= 6 && ++i)
-		execution(arg, content, pos[1] + pos[2] + pos[3], (__uint32_t []){-1, pos[1], pos[2], pos[3]});
+		execution(arg, content, pos[1] + pos[2] + pos[3], (__uint8_t []){7, pos[1], pos[2], pos[3]});
 	if (pos[2] && pos[3] && pos[0] && pos[2] + pos[3] + pos[0]<= 6 && ++i)
-		execution(arg, content, pos[2] + pos[3] + pos[0], (__uint32_t []){pos[0], -1, pos[2], pos[3]});
+		execution(arg, content, pos[2] + pos[3] + pos[0], (__uint8_t []){pos[0], 7, pos[2], pos[3]});
 	if (pos[3] && pos[0] && pos[1] && pos[3] + pos[0] + pos[1] <= 6 && ++i)
-		execution(arg, content, pos[3] + pos[0] + pos[1], (__uint32_t []){pos[0], pos[1], -1, pos[3]});
+		execution(arg, content, pos[3] + pos[0] + pos[1], (__uint8_t []){pos[0], pos[1], 7, pos[3]});
 	if (pos[0] && pos[1] && pos[2] && pos[3] && pos[0] + pos[1] + pos[2] + pos[3] <= 6 && ++i)
-		execution(arg, content, pos[0] + pos[1] + pos[2] + pos[3], (__uint32_t []){pos[0], pos[1], pos[2], pos[3]});
+		execution(arg, content, pos[0] + pos[1] + pos[2] + pos[3], (__uint8_t []){pos[0], pos[1], pos[2], pos[3]});
 	if (!i)
-		execution(arg, content, 1, (__uint32_t []){-1, -1, -1, -1});
+		execution(arg, content, 1, (__uint8_t []){7, 7, 7, 7});
 }
 
-void	*routine(void *arg)
+void	routine(t_arg *arg)
 {
-	__uint32_t		i;
-	__uint32_t		pos[4];
-	__uint32_t		*content;
+	__uint8_t	i;
+	__uint8_t	pos[4];
 
-	i = ((t_arg *)arg)->i;
-	content = ((t_arg *)arg)->content ;
-	if (content[i])
-		return (NULL);
-	pos[0] = i > 2 ? content[i - 3] : 0;
-	pos[1] = i != 0 && i != 3 && i != 6 ? content[i - 1] : 0;
-	pos[2] = i != 2 && i != 5 && i != 8 ? content[i + 1] : 0;
-	pos[3] = i < 6 ? content[i + 3] : 0;
-	action(arg, content, pos);
-	return (NULL);
+	i = arg->i;
+	if (arg->content[i])
+		return ;
+	pos[0] = i > 2 ? arg->content[i - 3] : 0;
+	pos[1] = i != 0 && i != 3 && i != 6 ? arg->content[i - 1] : 0;
+	pos[2] = i != 2 && i != 5 && i != 8 ? arg->content[i + 1] : 0;
+	pos[3] = i < 6 ? arg->content[i + 3] : 0;
+	action(arg, arg->content, pos);
 }
 
-__uint32_t	loop(t_grid *restrict grid, __uint32_t depth, __uint32_t *restrict content)
+__uint32_t	loop(t_grid *restrict grid, __uint8_t depth, __uint8_t *restrict content)
 {
-	__uint32_t	id;
-	__uint32_t	zero;
-	__uint32_t	*tab;
+	__uint8_t	id;
+	__uint8_t	zero;
+	__uint8_t	*tab;
 
 	if (content && depth <= 0)
 		return (hash(content));
 	id = 0;
 	zero = 0;
 	tab = content ? content : grid->content;
-	for (__uint32_t i = 0; i < 9; i++)
+	for (__uint8_t i = 0; i < 9; i++)
 	{
 		if (!tab[i] && ++zero)
 			routine(&(t_arg){i, grid, depth, tab});
@@ -174,8 +169,8 @@ void	test(t_res *res, __uint32_t i)
 {
 	typedef struct s_test
 	{
-		__uint32_t		depth;
-		t_grid	grid;
+		__uint8_t	depth;
+		t_grid		grid;
 		__uint32_t	result;
 	}	t_test;
 
