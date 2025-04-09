@@ -1,7 +1,59 @@
-#include "main.h"
+# include <stdlib.h>
+# include <stdio.h>
+# include <string.h>
+# include <unistd.h>
+# include <sys/time.h>
+# include <pthread.h>
 
-inline int hash(int *content)
+
+typedef struct s_res
 {
+	pthread_mutex_t	mutex;
+	__uint32_t	value;
+}	t_res;
+
+typedef struct s_grid
+{
+	__uint32_t		content[9];
+	t_res	*result;
+}	t_grid;
+
+typedef struct	s_arg
+{
+	__uint32_t			i;
+	t_grid		*grid;
+	__uint32_t 		depth;
+	__uint32_t			*content;
+	pthread_t	*pthread;
+}	t_arg;
+
+__uint32_t	loop(t_grid *grid, __uint32_t depth, __uint32_t *content);
+__uint32_t	hash(__uint32_t *content);
+
+__uint32_t	*g_state;
+__uint32_t	*g_result;
+__uint32_t	s = 0;
+__uint32_t	r = 0;
+
+__uint32_t	final_result(void)
+{
+	__uint32_t	i;
+	__uint32_t	res;
+
+	res = 0;
+	i = -1;
+	while (++i < r)
+	{
+		// printf("state : %d value : %d\n", g_state[i], g_result[i]);
+		res = (res + g_result[i]) % 1073741824;
+	}
+	return (res);
+}
+
+inline __uint32_t hash(__uint32_t *content)
+{
+	if (!content)
+		return (0);
 	return ((\
 		(content[0] * 10e7) + \
 		(content[1] * 10e6) + \
@@ -14,12 +66,38 @@ inline int hash(int *content)
 		(content[8])));
 }
 
-int	*update(int *restrict dest, int *restrict src, int id, int v, int *restrict pos)
+__uint32_t	state_exist(__uint32_t hash)
 {
 	int	i;
 
 	i = -1;
-	show("SRC", src);
+	while (hash && g_state[++i])
+	{
+		if (g_state[i] == hash)
+			return (i);
+	}
+	s = i;
+	g_state[i] = hash;
+	return (0);
+}
+
+__uint32_t	index_of(__uint32_t hash)
+{
+	int	i = -1;
+
+	while (++i < s)
+	{
+		if (g_state[i] == hash)
+			return (i);
+	}
+	return (i);
+}
+
+__uint32_t	*update(__uint32_t *restrict dest, __uint32_t *restrict src, __uint32_t id, __uint32_t v, __uint32_t *restrict pos)
+{
+	__uint32_t	i;
+
+	i = -1;
 	while (++i < 9)
 	{
 		dest[i] = id == i ? v : src[i];
@@ -35,51 +113,59 @@ int	*update(int *restrict dest, int *restrict src, int id, int v, int *restrict 
 	return (dest);
 }
 
-void	action(t_arg *restrict arg, int *restrict content, int pos[4])
+void	execution(t_arg *restrict arg, __uint32_t *restrict content, __uint32_t result, __uint32_t pos[4])
 {
-	int	tab[12][9] = {0};
-	int			i;
+	__uint32_t	dest[9];
+	__uint32_t	vhash = hash(update(dest, content, arg->i, result, pos));
+	__uint32_t	exist = state_exist(vhash);
+
+	// if (!exist)
+		g_result[r++] = loop(arg->grid, arg->depth - 1, dest);
+}
+
+void	action(t_arg *restrict arg, __uint32_t *restrict content, __uint32_t pos[4])
+{
+	__uint32_t			i;
 
 	i = 0;
 	if (pos[0] && pos[1] && pos[0] + pos[1] <= 6 && ++i)
-		loop(arg->grid, arg->depth - 1, update(tab[0], content, arg->i, pos[0] + pos[1], (int []){pos[0], pos[1], -1, -1}));
+		execution(arg, content, pos[0] + pos[1], (__uint32_t []){pos[0], pos[1], -1, -1});
 	if (pos[0] && pos[2] && pos[0] + pos[2] <= 6 && ++i)
-		loop(arg->grid, arg->depth - 1, update(tab[1], content, arg->i, pos[0] + pos[2], (int []){pos[0], -1, pos[2], -1}));
+		execution(arg, content, pos[0] + pos[2], (__uint32_t []){pos[0], -1, pos[2], -1});
 	if (pos[0] && pos[3] && pos[0] + pos[3] <= 6 && ++i)
-		loop(arg->grid, arg->depth - 1, update(tab[2], content, arg->i, pos[0] + pos[3], (int []){pos[0], -1, -1, pos[3]}));
+		execution(arg, content, pos[0] + pos[3], (__uint32_t []){pos[0], -1, -1, pos[3]});
 
 	if (pos[1] && pos[3] && pos[1] + pos[3] <= 6 && ++i)
-		loop(arg->grid, arg->depth - 1, update(tab[3], content, arg->i, pos[1] + pos[3], (int []){-1, pos[1], -1, pos[3]}));
+		execution(arg, content, pos[1] + pos[3], (__uint32_t []){-1, pos[1], -1, pos[3]});
 	if (pos[2] && pos[3] && pos[2] + pos[3] <= 6 && ++i)
-		loop(arg->grid, arg->depth - 1, update(tab[4], content, arg->i, pos[2] + pos[3], (int []){-1, -1, pos[2], pos[3]}));
+		execution(arg, content, pos[2] + pos[3], (__uint32_t []){-1, -1, pos[2], pos[3]});
 	if (pos[1] && pos[2] && pos[1] + pos[2] <= 6 && ++i)
-		loop(arg->grid, arg->depth - 1, update(tab[5], content, arg->i, pos[1] + pos[2], (int []){-1, pos[1], pos[2], -1}));
+		execution(arg, content, pos[1] + pos[2], (__uint32_t []){-1, pos[1], pos[2], -1});
 
 	if (pos[0] && pos[1] && pos[2] && pos[0] + pos[1] + pos[2] <= 6 && ++i)
-		loop(arg->grid, arg->depth - 1, update(tab[6], content, arg->i, pos[0] + pos[1] + pos[2], (int []){pos[0], pos[1], pos[2], -1}));
+		execution(arg, content, pos[0] + pos[1] + pos[2], (__uint32_t []){pos[0], pos[1], pos[2], -1});
 	if (pos[1] && pos[2] && pos[3] && pos[1] + pos[2] + pos[3] <= 6 && ++i)
-		loop(arg->grid, arg->depth - 1, update(tab[7], content, arg->i, pos[1] + pos[2] + pos[3], (int []){-1, pos[1], pos[2], pos[3]}));
+		execution(arg, content, pos[1] + pos[2] + pos[3], (__uint32_t []){-1, pos[1], pos[2], pos[3]});
 	if (pos[2] && pos[3] && pos[0] && pos[2] + pos[3] + pos[0]<= 6 && ++i)
-		loop(arg->grid, arg->depth - 1, update(tab[8], content, arg->i, pos[2] + pos[3] + pos[0], (int []){pos[0], -1, pos[2], pos[3]}));
+		execution(arg, content, pos[2] + pos[3] + pos[0], (__uint32_t []){pos[0], -1, pos[2], pos[3]});
 	if (pos[3] && pos[0] && pos[1] && pos[3] + pos[0] + pos[1] <= 6 && ++i)
-		loop(arg->grid, arg->depth - 1, update(tab[9], content, arg->i, pos[3] + pos[0] + pos[1], (int []){pos[0], pos[1], -1, pos[3]}));
+		execution(arg, content, pos[3] + pos[0] + pos[1], (__uint32_t []){pos[0], pos[1], -1, pos[3]});
 	if (pos[0] && pos[1] && pos[2] && pos[3] && pos[0] + pos[1] + pos[2] + pos[3] <= 6 && ++i)
-		loop(arg->grid, arg->depth - 1, update(tab[10], content, arg->i, pos[0] + pos[1] + pos[2] + pos[3], (int []){pos[0], pos[1], pos[2], pos[3]}));
+		execution(arg, content, pos[0] + pos[1] + pos[2] + pos[3], (__uint32_t []){pos[0], pos[1], pos[2], pos[3]});
 	if (!i)
-		loop(arg->grid, arg->depth - 1, update(tab[11], content, arg->i, 1, (int []){-1, -1, -1, -1}));
+		execution(arg, content, 1, (__uint32_t []){-1, -1, -1, -1});
 }
 
 void	*routine(void *arg)
 {
-	int		i;
-	int		pos[4];
-	int		*content;
+	__uint32_t		i;
+	__uint32_t		pos[4];
+	__uint32_t		*content;
 
 	i = ((t_arg *)arg)->i;
 	content = ((t_arg *)arg)->content ;
 	if (content[i])
 		return (pthread_detach(*((t_arg *)arg)->pthread), NULL);
-	printf("DEPTH : %d\n", ((t_arg *)arg)->depth);	
 	pos[0] = i > 2 ? content[i - 3] : 0;
 	pos[1] = i != 0 && i != 3 && i != 6 ? content[i - 1] : 0;
 	pos[2] = i != 2 && i != 5 && i != 8 ? content[i + 1] : 0;
@@ -88,49 +174,35 @@ void	*routine(void *arg)
 	return (NULL);
 }
 
-void	loop(t_grid *grid, int depth, int *content)
+__uint32_t	loop(t_grid *grid, __uint32_t depth, __uint32_t *content)
 {
-	int			id;
-	int			zero;
-	int			*tab;
+	__uint32_t			id;
+	__uint32_t			zero;
+	__uint32_t			*tab;
 	pthread_t	pthread[9];
 
 	if (content && depth <= 0)
-	{
-		// pthread_mutex_lock(&grid->result->mutex);
-		show("END", content);
-		grid->result->value = (grid->result->value + hash(content)) % (1 << 30);
-		// pthread_mutex_unlock(&grid->result->mutex);
-		return ;
-	}
+		return hash(content);
 	id = 0;
 	zero = 0;
 	tab = content ? content : grid->content;
-	for (int i = 0; i < 9; i++)
+	for (__uint32_t i = 0; i < 9; i++)
 	{
-		if (!tab[i])
-		{
-			zero++;
+		if (!tab[i] && ++zero)
 			routine(&(t_arg){i, grid, depth, tab, &pthread[i]});
-			// pthread_create(&pthread[id], NULL, &routine, &(t_arg){i, grid, depth, tab, &pthread[i]});
-			// pthread_join(pthread[id++], NULL);
-		}
 	}
 	if (!zero)
-	{
-		// pthread_mutex_lock(&grid->result->mutex);
-		grid->result->value = (grid->result->value + hash(content)) % (1 << 30);
-		// pthread_mutex_unlock(&grid->result->mutex);
-	}
+		return (hash(content));
+	return (0);
 }
 
-void	test(t_res *res, int i)
+void	test(t_res *res, __uint32_t i)
 {
 	typedef struct s_test
 	{
-		int		depth;
+		__uint32_t		depth;
 		t_grid	grid;
-		int	result;
+		__uint32_t	result;
 	}	t_test;
 
 	t_test			checker[12];
@@ -141,7 +213,7 @@ void	test(t_res *res, int i)
 	checker[2] = (t_test){1, {{5, 5, 5, 0, 0, 5, 5, 5, 5}, res}, 36379286};
 	checker[3] = (t_test){1, {{6, 1, 6, 1, 0, 1, 6, 1, 6}, res}, 264239762};
 	checker[4] = (t_test){8, {{6, 0, 6, 0, 0, 0, 6, 1, 5}, res}, 76092874};
-	checker[5] = (t_test){24, {{3, 0, 0, 3, 6, 2, 1, 0, 2}, res}, 0};
+	checker[5] = (t_test){24, {{3, 0, 0, 3, 6, 2, 1, 0, 2}, res}, 661168294};
 	checker[6] = (t_test){36, {{6, 0, 4, 2, 0, 2, 4, 0, 0}, res}, 0};
 	checker[7] = (t_test){32, {{0, 0, 0, 0, 5, 4, 1, 0, 5}, res}, 0};
 	checker[8] = (t_test){40, {{0, 0, 4, 0, 2, 4, 1, 3, 4}, res}, 0};
@@ -149,12 +221,21 @@ void	test(t_res *res, int i)
 	checker[10] = (t_test){20, {{0, 5, 1, 0, 0, 0, 4, 0, 1}, res}, 0};
 	checker[11] = (t_test){20, {{1, 0, 0, 3, 5, 2, 1, 0, 0}, res}, 0};
 	res->value = 0;
-	show("initial grid", checker[i].grid.content);
+	g_state = (__uint32_t *)calloc(500000000, sizeof(__uint32_t));
+	g_result = (__uint32_t *)calloc(500000000, sizeof(__uint32_t));
+	if (!g_result || !g_state)
+	{
+		perror("bad allocation");
+		exit(0);
+	}
 	gettimeofday(&begin, NULL);
 	loop(&checker[i].grid, checker[i].depth, NULL);
+	res->value = final_result();
 	gettimeofday(&end, NULL);
-	printf("final result : %d %d %s\e[0;0m\n", res->value, checker[i].result, res->value == checker[i].result ? "\e[0;92mOK" : "\e[0;91mKO");
+	printf("final result : %d %d %s\e[0;0m\n", res->value , checker[i].result, res->value == checker[i].result ? "\e[0;92mOK" : "\e[0;91mKO");
 	printf("timer : %ld ms\n", ((end.tv_sec - begin.tv_sec) * 1000L + (end.tv_usec - begin.tv_usec) / 1000l));
+	free(g_state);
+	free(g_result);
 }
 
 int main(int argc, char **argv)
